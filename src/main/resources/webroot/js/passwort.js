@@ -49,11 +49,43 @@ $(document).ready(function () {
                             .append("<input type='button' value='GO' id='Adminshop'/>")
                             .append("<br>Kontostände: <br> Überprüfe Kontostand von: <input type='text' value='name' id='Adminname'/>").append("<input type='button' value='OK' id='geld'/>")
                             .append("<br>Setze Kontostand von: <input type='text' value='Name' id='KontoName'/>").append(" zu: <input type='text' value='Betrag' id='Kontobetrag'/>").append("<input type='button' value='setzen' id='zeigeUser'/>")
-                            
+                            .append("<br> Zeige alle User an: <input type='button' value='ok' id='Useranzeige'/>")
+                            .append("<br> Lösche User: <input type='text' value='Name' id='deleteUserName'/> <input type='text' value='Name' id='deleteUserButton'/>")
                             
                             .append("<br><br> OUTPUT:");
     });
-           $(document).on("click","#zeigeUser",function(){
+          
+     $(document).on("click","#Useranzeige",function(){
+         $.post("../anfrage", {
+                typ: "zeigeUseran",
+                geheim: $("#KontoName").val()
+            },
+                    function(data){
+                        if (data.text == "zeigeALLEuser") {
+                        
+                    
+                        var size = data.size2;
+                        for (var i = 0; i < size; i++){
+                           
+                            var name = data["name"+i];
+                            var adr = data["adresse"+i];
+                            var money = data["money"+i];
+                            var func = data["function"+i];
+                            var passwort = data["passwort"+i];
+                            
+                            $("body").append("<br>Name: " + name)
+                        
+                              $("body").append("         Adresse: " + adr + "       Kontostand: " + money +"€ " +  "      Funktion: " + func );
+                              
+                            $("body").append("     Passwort: " + passwort);
+                        }
+                        }
+                       
+                    }
+                            );
+     });
+    
+    $(document).on("click","#zeigeUser",function(){
            $.post("../anfrage", {
                 typ: "setzeKonto",
                 Name: $("#KontoName").val(),
@@ -291,13 +323,13 @@ $(document).ready(function () {
             }, function (data){
                 if (data.typ=="bestätigung") {
                     if (data.text=="richtig") {
-                         $("body").append("Ihr Account wurde erstellt")        
+                         $("body").append("<br>Ihr Account wurde erstellt")        
                     }
                     else if (data.text=="falsch"){
-                        $("body").append("Dieser Benutzer existiert schon")  
+                        $("body").append("<br>Dieser Benutzer existiert schon")  
                     }
                     else if (data.text =="leer"){
-                         $("body").append("Sie müssen alle Felder ausfüllen!") 
+                         $("body").append("<br>Sie müssen alle Felder ausfüllen!") 
                     }
                     
                

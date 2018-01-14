@@ -379,7 +379,7 @@ public class HttpVerticle extends AbstractVerticle {
             String passwort=routingContext.request().getParam("passwort");
             String adresse = routingContext.request().getParam("regadresse");
             if (!name.isEmpty() && !passwort.isEmpty() && !adresse.isEmpty()) {
-                
+                LOGGER.info("Registration");
            
             JsonObject request = new JsonObject().put("name", name).put("passwort", passwort).put("adresse", adresse);
             DeliveryOptions options = new DeliveryOptions().addHeader("action", "erstelleUser");
@@ -405,7 +405,9 @@ public class HttpVerticle extends AbstractVerticle {
             });
         }
             else{
+                LOGGER.info("leer");
                 jo.put("typ", "bestätigung").put("text", "leer");
+                response.end(Json.encodePrettily(jo));
             }}
         else if (typ.equals("zeigeItem")){
             JsonObject request = new JsonObject();
@@ -429,10 +431,45 @@ public class HttpVerticle extends AbstractVerticle {
                 });
              
                     
-                    
+                       
                     
              
              
+        }
+        else if (typ.equals("zeigeUseran")) {
+            LOGGER.info("zeige alle User an");
+            String geheim = routingContext.request().getParam("geheim");
+                        JsonObject request = new JsonObject();
+             DeliveryOptions options = new DeliveryOptions().addHeader("action", "zeigeUser");
+            
+             vertx.eventBus().send(EB_ADRESSE, request,options,  reply -> {
+                if( reply.succeeded()){
+                    JsonObject ant = (JsonObject) reply.result().body();
+                    jo.put("size2", (ant.size()+1)/6);
+                    
+                    LOGGER.info("datenbank info erhalten");
+                    for (int i = 0; i < ant.getInteger("size"); i++) {
+                        int id = ant.getInteger("id" + i);
+                      
+                        String name = ant.getString("name" + i);
+
+
+                        String passwort = ant.getString("passwort" + i);
+                    
+                        String adresse = ant.getString("adresse" + i);
+                   
+                        int money = ant.getInteger("money" + i);
+                       
+                        String function = ant.getString("function" + i);
+                         
+                            jo.put("text","zeigeALLEuser" ).put("id", id).put("name"+i, name).put("adresse" + i, adresse).put("money" +i, money).put("function" + i, function).put("passwort" +i, passwort);  
+                      
+                        }
+                    response.end(Json.encodePrettily(jo));
+                   
+                        
+                    }
+                });
         }
         else if (typ.equals("Shopoffnen")){
             LOGGER.info("shop wird aufgerufen");

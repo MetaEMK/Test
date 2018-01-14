@@ -28,7 +28,7 @@ public class DatenbankVerticle extends AbstractVerticle {
     private static final String SQL_ÜBERPRÜFE_ADRESSE =         "select adresse from user where name =?";
     private static final String SQL_ÜBERPRÜFE_ITEM =            "select name from item where name =?";
 
-    private static final String SQL_DELETE =                    "drop table item";
+    private static final String SQL_DELETE =                    "drop table user";
     private static final String SQL_ZEIGE_ITEMS =               "select name,preis from item";
     private static final String SQL_ÜBERPRÜFE_PREIS     =       "select preis from item where name =?";
     private static final String USER_EXISTIERT = "USER_EXISITIERT";
@@ -88,6 +88,9 @@ public class DatenbankVerticle extends AbstractVerticle {
         String action = message.headers().get("action");
 
         switch (action) {
+            case "zeigeUser":
+                zeigeUser(message);
+                break;
             case "buyItem":
                 buyItem(message);
                 break;
@@ -234,7 +237,37 @@ public class DatenbankVerticle extends AbstractVerticle {
         });
         return erstellenFuture;
     }
-
+    private void zeigeUser(Message<JsonObject> message){
+        LOGGER.info("Datenbank checkt alle User");
+        dbClient.getConnection(res -> {
+            if (res.succeeded()) {
+                SQLConnection con = res.result();
+                con.query("select id,name,passwort,adresse,money,function from user", reply ->{
+                     JsonObject adf = new JsonObject();
+                     LOGGER.info("erfolgreich");
+                    if (reply.succeeded()) {
+                        LOGGER.info("Übermittlung fängt an");
+                    List<JsonArray> liste = reply.result().getResults(); 
+                        for (int i = 0; i < liste.size(); i++) {
+                            JsonArray array = liste.get(i);
+                            
+                            adf.put("name" +i, array.getString(1));                        
+                            adf.put("passwort" +i, array.getString(2));
+                            adf.put("adresse" +i, array.getString(3));
+                            adf.put("money" +i, array.getInteger(4));
+                            adf.put("function"+i, array.getString(5));
+                  
+                            
+                            
+                        }
+                        adf.put("size", liste.size());
+                        message.reply(adf);
+                        LOGGER.info("Übermittlung fertig");
+                    }
+                });
+            }
+        });
+    }
     private void erstelleNeuenUser(Message<JsonObject> message) {
         String name = message.body().getString("name");
         String passwort = message.body().getString("passwort");
@@ -252,7 +285,7 @@ public class DatenbankVerticle extends AbstractVerticle {
             } else {
                 String grund = reply.cause().toString();
                 LOGGER.info(grund);
-                if (grund.equals(USER_EXISTIERT)) {
+                if (grund.equals("io.vertx.core.impl.NoStackTraceThrowable: USER_EXISITIERT")) {
                     LOGGER.info("REG: reply (negative) sent");
                     message.reply(new JsonObject().put("REGsuccess", Boolean.FALSE));
                 }
