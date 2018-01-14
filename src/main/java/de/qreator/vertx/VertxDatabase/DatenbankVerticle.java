@@ -128,7 +128,7 @@ public class DatenbankVerticle extends AbstractVerticle {
                 break;
             case "changeAdresse":
                 uptAdresse(message);
-
+                break;
             default:
                 message.fail(ErrorCodes.SCHLECHTE_AKTION.ordinal(), "Schlechte Aktion: " + action);
         }
@@ -628,7 +628,6 @@ public class DatenbankVerticle extends AbstractVerticle {
         
         dbClient.getConnection(res -> {
             if (res.succeeded()) {
-
                 SQLConnection connection = res.result();
                 connection.execute("update user set adresse = " + "'" + adresse + "'" + " where name = " + "'" + name + "'" + "", change -> {
                     if (change.succeeded()) {
