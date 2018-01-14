@@ -91,7 +91,7 @@ public class HttpVerticle extends AbstractVerticle {
            
             jo.put("typ", "angemeldet");
             String name = session.get("name");
-            LOGGER.info("name" + name);
+           
             if (angemeldet != null && angemeldet.equals("ja")) {
                 LOGGER.info("User ist angemeldet.");
        
@@ -339,8 +339,10 @@ public class HttpVerticle extends AbstractVerticle {
             JsonObject request  = new JsonObject().put("name", name).put("adresse", adresse);
             DeliveryOptions options = new DeliveryOptions().addHeader("action", "changeAdresse");
             vertx.eventBus().send(EB_ADRESSE, request, options, reply -> {
+                
                 if (reply.succeeded()) {
                     JsonObject control = (JsonObject) reply.result().body();
+                    LOGGER.info(control.getString("ÄnderrungAdresse"));
                     if (control.getString("ÄnderrungAdresse").equals("es tut")) {
                         jo.put("CHANGEadresse","erfolgreich");
                         LOGGER.info("Adresse erfolgreich geändert");
@@ -436,9 +438,38 @@ public class HttpVerticle extends AbstractVerticle {
              
              
         }
+        else if (typ.equals("deleteUser")) {
+            LOGGER.info("lösche User");
+            String name = routingContext.request().getParam("username");
+            DeliveryOptions options = new DeliveryOptions().addHeader("action", "deleteUser");
+            JsonObject request = new JsonObject().put("name", name);
+            vertx.eventBus().send(EB_ADRESSE,request,options,reply -> {
+              
+                if (reply.succeeded()) {
+                    JsonObject ant = (JsonObject) reply.result().body();
+                    String antwort = ant.getString("Userdelete");
+                      
+                    if (antwort.equals("ja")) {
+                          LOGGER.info("User geläscht");
+                       jo.put("delUser", "success");
+                    }
+                    else if(antwort.equals("not found")){
+                         
+                        jo.put("delUser", "where");
+                    }
+                    else{
+                          
+                        jo.put("delUser", "fehler");
+                    }
+                    response.end(Json.encodePrettily(jo));
+                }
+                
+ 
+            });
+        }
         else if (typ.equals("zeigeUseran")) {
             LOGGER.info("zeige alle User an");
-            String geheim = routingContext.request().getParam("geheim");
+           
                         JsonObject request = new JsonObject();
              DeliveryOptions options = new DeliveryOptions().addHeader("action", "zeigeUser");
             

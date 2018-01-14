@@ -17,25 +17,23 @@ import org.slf4j.LoggerFactory;
 
 public class DatenbankVerticle extends AbstractVerticle {
 
-    private static final String SQL_NEUE_TABELLE_SHOP =         "create table if not exists item(id int auto_increment, name varchar(20) not null, preis int not null,primary key(name))";
-    private static final String SQL_NEUE_TABELLE =              "create table if not exists user(id int auto_increment,name varchar(20) not null, passwort varchar(20) not null,adresse varchar(20) not null,money int not null,function varchar(20) not null,primary key(name))";
-    private static final String SQL_ÜBERPRÜFE_PASSWORT =        "select passwort from user where name=?";
-    private static final String SQL_ÜBERPRÜFE_EXISTENZ_USER =   "select name from user where name=?";
-    private static final String SQL_ÜBERPRÜFE_FUNCTION =        "select function from user where name =?";
-    private static final String SQL_DELETE_ITEM =               "delete from item where name =?";
-    private static final String SQL_DELETE_USER =               "delete from user where name =?";
-    private static final String SQL_ÜBERPRÜFE_KONTO =           "select money from user where name =?";
-    private static final String SQL_ÜBERPRÜFE_ADRESSE =         "select adresse from user where name =?";
-    private static final String SQL_ÜBERPRÜFE_ITEM =            "select name from item where name =?";
+    private static final String SQL_NEUE_TABELLE_SHOP = "create table if not exists item(id int auto_increment, name varchar(20) not null, preis int not null,primary key(name))";
+    private static final String SQL_NEUE_TABELLE = "create table if not exists user(id int auto_increment,name varchar(20) not null, passwort varchar(20) not null,adresse varchar(20) not null,money int not null,function varchar(20) not null,primary key(name))";
+    private static final String SQL_ÜBERPRÜFE_PASSWORT = "select passwort from user where name=?";
+    private static final String SQL_ÜBERPRÜFE_EXISTENZ_USER = "select name from user where name=?";
+    private static final String SQL_ÜBERPRÜFE_FUNCTION = "select function from user where name =?";
+    private static final String SQL_DELETE_ITEM = "delete from item where name =?";
+    private static final String SQL_DELETE_USER = "delete from user where name =?";
+    private static final String SQL_ÜBERPRÜFE_KONTO = "select money from user where name =?";
+    private static final String SQL_ÜBERPRÜFE_ADRESSE = "select adresse from user where name =?";
+    private static final String SQL_ÜBERPRÜFE_ITEM = "select name from item where name =?";
 
-    private static final String SQL_DELETE =                    "drop table user";
-    private static final String SQL_ZEIGE_ITEMS =               "select name,preis from item";
-    private static final String SQL_ÜBERPRÜFE_PREIS     =       "select preis from item where name =?";
+    private static final String SQL_DELETE = "drop table user";
+    private static final String SQL_ZEIGE_ITEMS = "select name,preis from item";
+    private static final String SQL_ÜBERPRÜFE_PREIS = "select preis from item where name =?";
     private static final String USER_EXISTIERT = "USER_EXISITIERT";
     private static final String SQL_ÜBERPRÜFE_ITEMNAME = "select name from item where name =?";
     private static final String EB_ADRESSE = "vertxdatabase.eventbus";
-
-    
 
     private enum ErrorCodes {
         KEINE_AKTION,
@@ -47,7 +45,6 @@ public class DatenbankVerticle extends AbstractVerticle {
     private static final Logger LOGGER = LoggerFactory.getLogger("de.qreator.vertx.VertxDatabase.Datenbank");
 
     private JDBCClient dbClient;
-    
 
     public void start(Future<Void> startFuture) throws Exception {
         JsonObject config = new JsonObject()
@@ -55,10 +52,9 @@ public class DatenbankVerticle extends AbstractVerticle {
                 .put("driver_class", "org.h2.Driver");
 
         dbClient = JDBCClient.createShared(vertx, config);
-       
-        
+
         Future<Void> datenbankFuture = erstelleDatenbank(); //.compose(db -> erstelleUser("user", "geheim"));
-        
+
         erstelleShopDB();
 
         datenbankFuture.setHandler(db -> {
@@ -67,16 +63,16 @@ public class DatenbankVerticle extends AbstractVerticle {
                 vertx.eventBus().consumer(EB_ADRESSE, this::onMessage);
                 erstelleUser("Admin", "passwort", "unknown", "admin", 9999);
                 erstelleUser("test", "passwort", "unknown", "user", 25);
-                
+
                 startFuture.complete();
             } else {
                 LOGGER.info("Probleme beim Initialisieren der Datenbank");
                 startFuture.fail(db.cause());
             }
         });
-        
+
     }
-    
+
     public void onMessage(Message<JsonObject> message) {
 
         if (!message.headers().contains("action")) {
@@ -88,6 +84,9 @@ public class DatenbankVerticle extends AbstractVerticle {
         String action = message.headers().get("action");
 
         switch (action) {
+            case "deleteUser":
+                deleteUser(message);
+                break;
             case "zeigeUser":
                 zeigeUser(message);
                 break;
@@ -110,8 +109,8 @@ public class DatenbankVerticle extends AbstractVerticle {
                 löscheItem(message);
                 break;
             case "erstelleItem":
-                 erstelleItem(message);
-                 break;
+                erstelleItem(message);
+                break;
             case "ueberpruefe-passwort":
                 überprüfeUser(message);
                 break;
@@ -153,7 +152,8 @@ public class DatenbankVerticle extends AbstractVerticle {
 
         });
     }
-        private void uptKonto(Message<JsonObject> message) {
+
+    private void uptKonto(Message<JsonObject> message) {
         String name = message.body().getString("name");
         int konto = message.body().getInteger("konto");
         String konto2 = "" + konto;
@@ -161,59 +161,56 @@ public class DatenbankVerticle extends AbstractVerticle {
         dbClient.getConnection(res -> {
             if (res.succeeded()) {
                 SQLConnection connection = res.result();
-                connection.execute("update user set money = " + konto +  " where name = " + "'" + name + "'" + "", abfrage -> {
-                    if (abfrage.succeeded()) {  
+                connection.execute("update user set money = " + konto + " where name = " + "'" + name + "'" + "", abfrage -> {
+                    if (abfrage.succeeded()) {
                         message.reply(new JsonObject().put("uptKonto", "success"));
-                        
-                        
-                    }
-                    else{
+
+                    } else {
                         LOGGER.error("" + abfrage.cause());
                         message.reply(new JsonObject().put("uptKonto", abfrage.cause().toString()));
                     }
- 
+
                 });
             }
- 
+
         });
     }
-    private void getPreis(Message <JsonObject> message){
+
+    private void getPreis(Message<JsonObject> message) {
         String itemname = message.body().getString("Gegenstand");
         LOGGER.info(itemname);
-        dbClient.getConnection(res ->{
+        dbClient.getConnection(res -> {
             if (res.succeeded()) {
                 SQLConnection connection = res.result();
-                connection.queryWithParams(SQL_ÜBERPRÜFE_ITEM, new JsonArray().add(itemname), abfrage ->{
-                     if (abfrage.succeeded()) {
-                         
-                         List<JsonArray> liste = abfrage.result().getResults();
-                         
-                         if (liste.isEmpty()) {
-                           
-                             message.reply(new JsonObject().put("ItemPreis", -1));
-                         }
-                     else{
-                        
-                        
-                 
-               
-                connection.queryWithParams(SQL_ÜBERPRÜFE_PREIS, new JsonArray().add(itemname), ab ->{
-                     
-                    if (ab.succeeded()) {
-                        List<JsonArray> liste2 = ab.result().getResults();
-                         
-                        int zeilen = liste2.get(0).getInteger(0);
-                       
-                            message.reply(new JsonObject().put("ItemPreis", zeilen));
+                connection.queryWithParams(SQL_ÜBERPRÜFE_ITEM, new JsonArray().add(itemname), abfrage -> {
+                    if (abfrage.succeeded()) {
+
+                        List<JsonArray> liste = abfrage.result().getResults();
+
+                        if (liste.isEmpty()) {
+
+                            message.reply(new JsonObject().put("ItemPreis", -1));
+                        } else {
+
+                            connection.queryWithParams(SQL_ÜBERPRÜFE_PREIS, new JsonArray().add(itemname), ab -> {
+
+                                if (ab.succeeded()) {
+                                    List<JsonArray> liste2 = ab.result().getResults();
+
+                                    int zeilen = liste2.get(0).getInteger(0);
+
+                                    message.reply(new JsonObject().put("ItemPreis", zeilen));
+                                }
+                            });
+                        }
                     }
                 });
-                     }}
-                        });
-                
+
             }
- 
+
         });
     }
+
     private Future<Void> erstelleDatenbank() {
 
         Future<Void> erstellenFuture = Future.future();
@@ -237,28 +234,27 @@ public class DatenbankVerticle extends AbstractVerticle {
         });
         return erstellenFuture;
     }
-    private void zeigeUser(Message<JsonObject> message){
+
+    private void zeigeUser(Message<JsonObject> message) {
         LOGGER.info("Datenbank checkt alle User");
         dbClient.getConnection(res -> {
             if (res.succeeded()) {
                 SQLConnection con = res.result();
-                con.query("select id,name,passwort,adresse,money,function from user", reply ->{
-                     JsonObject adf = new JsonObject();
-                     LOGGER.info("erfolgreich");
+                con.query("select id,name,passwort,adresse,money,function from user", reply -> {
+                    JsonObject adf = new JsonObject();
+                    LOGGER.info("erfolgreich");
                     if (reply.succeeded()) {
                         LOGGER.info("Übermittlung fängt an");
-                    List<JsonArray> liste = reply.result().getResults(); 
+                        List<JsonArray> liste = reply.result().getResults();
                         for (int i = 0; i < liste.size(); i++) {
                             JsonArray array = liste.get(i);
-                            
-                            adf.put("name" +i, array.getString(1));                        
-                            adf.put("passwort" +i, array.getString(2));
-                            adf.put("adresse" +i, array.getString(3));
-                            adf.put("money" +i, array.getInteger(4));
-                            adf.put("function"+i, array.getString(5));
-                  
-                            
-                            
+                            adf.put("id" +i, array.getInteger(0));
+                            adf.put("name" + i, array.getString(1));
+                            adf.put("passwort" + i, array.getString(2));
+                            adf.put("adresse" + i, array.getString(3));
+                            adf.put("money" + i, array.getInteger(4));
+                            adf.put("function" + i, array.getString(5));
+
                         }
                         adf.put("size", liste.size());
                         message.reply(adf);
@@ -268,6 +264,37 @@ public class DatenbankVerticle extends AbstractVerticle {
             }
         });
     }
+
+    private void deleteUser(Message<JsonObject> m) {
+        LOGGER.info("DB löscht User");
+        String name = m.body().getString("name");
+        dbClient.getConnection(res -> {
+            if (res.succeeded()) {
+                SQLConnection con = res.result();
+                con.queryWithParams(SQL_ÜBERPRÜFE_EXISTENZ_USER, new JsonArray().add(name), ant -> {
+                    if (ant.succeeded()) {
+                        List<JsonArray> liste = ant.result().getResults();
+                        if (!liste.isEmpty()) {
+
+                            con.querySingleWithParams(SQL_DELETE_USER, new JsonArray().add(name), reply -> {
+                                if (reply.succeeded()) {
+                                    m.reply(new JsonObject().put("Userdelete", "ja"));
+                                    LOGGER.info("antwort wird formuliert");
+                                } else {
+                                    m.reply(new JsonObject().put("Userdelete", "fehler"));
+                                    LOGGER.error(reply.cause().toString());
+                                }
+
+                            });
+                        } else {
+                            m.reply(new JsonObject().put("Userdelete", "not found"));
+                        }
+                    }
+                });
+            }
+        });
+    }
+
     private void erstelleNeuenUser(Message<JsonObject> message) {
         String name = message.body().getString("name");
         String passwort = message.body().getString("passwort");
@@ -293,58 +320,58 @@ public class DatenbankVerticle extends AbstractVerticle {
 
         });
     }
-    
-    
-    private void  erstelleShopDB() {
-    
+
+    private void erstelleShopDB() {
+
         LOGGER.info("Shop Datenbank wird erstellt");
-        
-         dbClient.getConnection(res -> {
-            if (res.succeeded()) {
-                SQLConnection connection = res.result();
-                connection.execute(SQL_NEUE_TABELLE_SHOP, erstellen ->{
-                    
-                    if (erstellen.succeeded()) {
-                       
-                        LOGGER.info("Shop Datenbank erfolgreich erstellt!");
-                    } else {
-                        
-                        LOGGER.error(erstellen.cause().toString());
-                    
-                    }
-                });   
-            }
-         });
-    }
-    private void  Shopausgeben(Message<JsonObject> message) {
-        String name = message.body().getString("search");
+
         dbClient.getConnection(res -> {
             if (res.succeeded()) {
-                 SQLConnection connection = res.result();
-                connection.queryWithParams(SQL_ÜBERPRÜFE_ITEM, new JsonArray().add(name), abfrage ->{
-                     if (abfrage.succeeded()) {
-                         LOGGER.info("In der Datenbank sind Einträge");
-                         List<JsonArray> liste = abfrage.result().getResults();
-                         
-                         if (liste.isEmpty()) {
-                             LOGGER.info("ein solches Item existiert nicht");
-                             message.reply(new JsonObject().put("ItemExistenz", Boolean.FALSE));
-                         }
-                     }else{
-                         LOGGER.info("In der Datenbank sind Einträge");
-                         message.reply(new JsonObject().put("ItemExistenz", Boolean.TRUE));
-                     }
+                SQLConnection connection = res.result();
+                connection.execute(SQL_NEUE_TABELLE_SHOP, erstellen -> {
+
+                    if (erstellen.succeeded()) {
+
+                        LOGGER.info("Shop Datenbank erfolgreich erstellt!");
+                    } else {
+
+                        LOGGER.error(erstellen.cause().toString());
+
+                    }
                 });
             }
         });
     }
-    
-    private void löscheItem(Message<JsonObject> message){
+
+    private void Shopausgeben(Message<JsonObject> message) {
+        String name = message.body().getString("search");
+        dbClient.getConnection(res -> {
+            if (res.succeeded()) {
+                SQLConnection connection = res.result();
+                connection.queryWithParams(SQL_ÜBERPRÜFE_ITEM, new JsonArray().add(name), abfrage -> {
+                    if (abfrage.succeeded()) {
+                        LOGGER.info("In der Datenbank sind Einträge");
+                        List<JsonArray> liste = abfrage.result().getResults();
+
+                        if (liste.isEmpty()) {
+                            LOGGER.info("ein solches Item existiert nicht");
+                            message.reply(new JsonObject().put("ItemExistenz", Boolean.FALSE));
+                        }
+                    } else {
+                        LOGGER.info("In der Datenbank sind Einträge");
+                        message.reply(new JsonObject().put("ItemExistenz", Boolean.TRUE));
+                    }
+                });
+            }
+        });
+    }
+
+    private void löscheItem(Message<JsonObject> message) {
         String name = message.body().getString("name");
         dbClient.getConnection(res -> {
-            if(res.succeeded()){
+            if (res.succeeded()) {
                 SQLConnection connection = res.result();
-                connection.queryWithParams(SQL_DELETE_ITEM, new JsonArray().add(name), lösche ->{
+                connection.queryWithParams(SQL_DELETE_ITEM, new JsonArray().add(name), lösche -> {
                     if (lösche.succeeded()) {
                         message.reply(new JsonObject().put("deleteItem", "success"));
                     }
@@ -352,7 +379,8 @@ public class DatenbankVerticle extends AbstractVerticle {
             }
         });
     }
-    private void test(Message<JsonObject> message){
+
+    private void test(Message<JsonObject> message) {
         dbClient.getConnection(res -> {
             if (res.succeeded()) {
                 SQLConnection con = res.result();
@@ -362,71 +390,65 @@ public class DatenbankVerticle extends AbstractVerticle {
                         JsonObject adf = new JsonObject();
                         LOGGER.info("tut2");
                         List<JsonArray> liste = baum.result().getResults();
-                        for (int i = 0; i < liste.size(); i++) {   
-                        JsonArray test = liste.get(i);
-                        adf.put("test " + i,test.getString(0));
-                        adf.put("preis2" + i, test.getInteger(1));
-                        } 
+                        for (int i = 0; i < liste.size(); i++) {
+                            JsonArray test = liste.get(i);
+                            adf.put("test " + i, test.getString(0));
+                            adf.put("preis2" + i, test.getInteger(1));
+                        }
                         int ads = liste.size();
-                     
+
                         adf.put("size", ads);
                         message.reply(adf);
-                        
-                    }
-                    else{
+
+                    } else {
                         LOGGER.error("Fehler" + baum.cause());
                     }
                 });
             }
         });
     }
-    private void erstelleItem(Message<JsonObject> message){
-        
+
+    private void erstelleItem(Message<JsonObject> message) {
+
         String name = message.body().getString("name");
         String preis2 = message.body().getString("preis");
         int preis = Integer.parseInt(preis2);
         dbClient.getConnection(res -> {
             if (res.succeeded()) {
                 SQLConnection connection = res.result();
-                
-                connection.queryWithParams(SQL_ÜBERPRÜFE_ITEMNAME, new JsonArray().add(name), abfrage ->{
-            
+
+                connection.queryWithParams(SQL_ÜBERPRÜFE_ITEMNAME, new JsonArray().add(name), abfrage -> {
+
                     if (abfrage.succeeded()) {
-                       
+
                         List<JsonArray> liste = abfrage.result().getResults();
                         if (liste.isEmpty()) {
-                            
-                            connection.execute("insert into item(name,preis) values ('" + name + "','" + preis + "')", erstellen ->{
+
+                            connection.execute("insert into item(name,preis) values ('" + name + "','" + preis + "')", erstellen -> {
                                 if (erstellen.succeeded()) {
-                                  
-                                    message.reply(new JsonObject().put("ersItem","ja"));
-                                }
-                                else{
+
+                                    message.reply(new JsonObject().put("ersItem", "ja"));
+                                } else {
                                     message.reply(new JsonObject().put("ersItem", "fehler"));
                                     LOGGER.error("Fehler beim Einfügen eines Shopitems: " + erstellen.cause());
                                 }
                             });
-                        }
-                        else{
+                        } else {
                             LOGGER.info("Shopitem existiert schon");
                             message.reply(new JsonObject().put("ersItem", "existiert"));
-                            
+
                         }
-                    }
-                    else{
+                    } else {
                         LOGGER.error("" + abfrage.cause());
                     }
- 
+
                 });
-            }
-            else{
+            } else {
                 LOGGER.error("Verbindung fehlgeschlagen: " + res.cause());
             }
         });
     }
-    
-    
-    
+
     private void getKonto(Message<JsonObject> message) {
         String name = message.body().getString("name");
         dbClient.getConnection(res -> {
@@ -436,12 +458,10 @@ public class DatenbankVerticle extends AbstractVerticle {
                     if (abfrage.succeeded()) {
                         List<JsonArray> liste = abfrage.result().getResults();
                         int zeilen = liste.get(0).getInteger(0);
-                       
-                            message.reply(new JsonObject().put("konto", zeilen));
-                             
-                            LOGGER.info("KONTO: Der Kontostand von " + name + " beträgt " + zeilen);
-                            
-                        
+
+                        message.reply(new JsonObject().put("konto", zeilen));
+
+                        LOGGER.info("KONTO: Der Kontostand von " + name + " beträgt " + zeilen);
 
                     }
 
@@ -451,6 +471,7 @@ public class DatenbankVerticle extends AbstractVerticle {
             }
         });
     }
+
     private void getAdresse(Message<JsonObject> message) {
         String name = message.body().getString("name");
         dbClient.getConnection(res -> {
@@ -461,8 +482,8 @@ public class DatenbankVerticle extends AbstractVerticle {
                         List<JsonArray> liste = abfrage.result().getResults();
                         String zeilen = liste.get(0).toString();
 
-                            message.reply(new JsonObject().put("adresse", zeilen));
-                            LOGGER.info("ADRESSE: Die Adresse von " + name + " ist " + zeilen);
+                        message.reply(new JsonObject().put("adresse", zeilen));
+                        LOGGER.info("ADRESSE: Die Adresse von " + name + " ist " + zeilen);
                     }
 
                 });
@@ -471,37 +492,36 @@ public class DatenbankVerticle extends AbstractVerticle {
             }
         });
     }
-    private void buyItem(Message <JsonObject> message){
+
+    private void buyItem(Message<JsonObject> message) {
         LOGGER.info("Datenbank nimmt daten auf");
         String name = message.body().getString("name");
         int konto = message.body().getInteger("konto");
         int preis = message.body().getInteger("Preis");
         int Kontostand = konto - preis;
         if (Kontostand >= 0) {
-            LOGGER.info("Kontostand: "+Kontostand);
-            
-        
-        dbClient.getConnection(res->{
-            if (res.succeeded()) {
-                SQLConnection connection = res.result();
-               connection.execute("update user set money = " + "'" + Kontostand + "'" +  " where name = "+ "'" + name + "'" + "", reply -> {
-                    if (reply.succeeded()) {
-                       message.reply(new JsonObject().put("Itemkauf", "erfolgreich"));
-                       LOGGER.info("Kauf erfolgreich");
-                   }
-                    else{
-                        message.reply(new JsonObject().put("Itemkauf", "Fehler"));
-                        LOGGER.info("Kauf nicht erfolgreich");
-                    }
-                });
-            }
-        });
-        }
-        else{
+            LOGGER.info("Kontostand: " + Kontostand);
+
+            dbClient.getConnection(res -> {
+                if (res.succeeded()) {
+                    SQLConnection connection = res.result();
+                    connection.execute("update user set money = " + "'" + Kontostand + "'" + " where name = " + "'" + name + "'" + "", reply -> {
+                        if (reply.succeeded()) {
+                            message.reply(new JsonObject().put("Itemkauf", "erfolgreich"));
+                            LOGGER.info("Kauf erfolgreich");
+                        } else {
+                            message.reply(new JsonObject().put("Itemkauf", "Fehler"));
+                            LOGGER.info("Kauf nicht erfolgreich");
+                        }
+                    });
+                }
+            });
+        } else {
             message.reply(new JsonObject().put("Itemkauf", "Kontostand"));
             LOGGER.info("Kauf nicht erfolgreich Kontostand zu niedrig");
         }
     }
+
     private void getFunction(Message<JsonObject> message) {
         String name = message.body().getString("name");
         dbClient.getConnection(res -> {
@@ -540,7 +560,7 @@ public class DatenbankVerticle extends AbstractVerticle {
                 connection.queryWithParams(SQL_ÜBERPRÜFE_EXISTENZ_USER, new JsonArray().add(name), abfrage -> {
                     if (abfrage.succeeded()) {
                         LOGGER.error("jetzt kommt der 1. fehler");
-                        List<JsonArray> zeilen = abfrage.result().getResults();       
+                        List<JsonArray> zeilen = abfrage.result().getResults();
                         if (zeilen.isEmpty()) { // User existiert noch nicht
                             LOGGER.info("Erstelle einen User mit dem Namen " + name + " und dem Passwort " + passwort);
                             connection.execute("insert into user(name,passwort,adresse,money,function) values('" + name + "','" + passwort + "','" + adresse + "','" + money + "','" + function + "')", erstellen -> {
@@ -600,26 +620,26 @@ public class DatenbankVerticle extends AbstractVerticle {
             }
         });
     }
-private void uptAdresse(Message<JsonObject> message){
-    LOGGER.info("Adresse wird geändert");
-    String name = message.body().getString("name");
-    String adresse = message.body().getString("adresse");
-    LOGGER.info(adresse);
-    dbClient.getConnection(res -> {
+
+    private void uptAdresse(Message<JsonObject> message) {
+        LOGGER.info("Adresse wird geändert");
+        String name = message.body().getString("name");
+        String adresse = message.body().getString("adresse");
+        
+        dbClient.getConnection(res -> {
             if (res.succeeded()) {
 
                 SQLConnection connection = res.result();
-                connection.execute("update user set adresse = " + "'" + adresse + "'" +  " where name = "+ "'" + name + "'" + "", change -> {
+                connection.execute("update user set adresse = " + "'" + adresse + "'" + " where name = " + "'" + name + "'" + "", change -> {
                     if (change.succeeded()) {
                         message.reply(new JsonObject().put("ÄnderrungAdresse", "es tut"));
                         LOGGER.info("ADRESSE: erfolgreich");
-                    }
-                    else{
-                         message.reply(new JsonObject().put("ÄnderrungAdresse", "tut nicht"));
-                         LOGGER.error("" + change.cause());
+                    } else {
+                        message.reply(new JsonObject().put("ÄnderrungAdresse", "tut nicht"));
+                        LOGGER.error("" + change.cause());
                     }
                 });
             }
-    });
-}
+        });
+    }
 }

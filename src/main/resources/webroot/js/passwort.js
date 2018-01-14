@@ -50,15 +50,28 @@ $(document).ready(function () {
                             .append("<br>Kontostände: <br> Überprüfe Kontostand von: <input type='text' value='name' id='Adminname'/>").append("<input type='button' value='OK' id='geld'/>")
                             .append("<br>Setze Kontostand von: <input type='text' value='Name' id='KontoName'/>").append(" zu: <input type='text' value='Betrag' id='Kontobetrag'/>").append("<input type='button' value='setzen' id='zeigeUser'/>")
                             .append("<br> Zeige alle User an: <input type='button' value='ok' id='Useranzeige'/>")
-                            .append("<br> Lösche User: <input type='text' value='Name' id='deleteUserName'/> <input type='text' value='Name' id='deleteUserButton'/>")
+                            .append("<br> Lösche User: <input type='text' value='Name' id='deleteUserName'/> <input type='button' value='Name' id='deleteUserButton'/>")
                             
                             .append("<br><br> OUTPUT:");
     });
-          
+      
+     $(document).on("click","#deleteUserButton",function(){
+         $.post("../anfrage", {
+                typ: "deleteUser",
+                username: $("#deleteUserName").val()
+            }, function(data){
+                var text = data.delUser;
+                if (text =="success") $("body").append("<br>User wurde erfolgreich gelöscht")
+                else if (text == "where")  $("body").append("<br>User wurde nicht gefunden")
+                else $("body").append("<br>Es ist ein Fehler aufgetreten")
+                
+            });
+        });
+    
      $(document).on("click","#Useranzeige",function(){
          $.post("../anfrage", {
                 typ: "zeigeUseran",
-                geheim: $("#KontoName").val()
+               
             },
                     function(data){
                         if (data.text == "zeigeALLEuser") {
@@ -66,7 +79,7 @@ $(document).ready(function () {
                     
                         var size = data.size2;
                         for (var i = 0; i < size; i++){
-                           
+                           var id = data["id"+i];
                             var name = data["name"+i];
                             var adr = data["adresse"+i];
                             var money = data["money"+i];
@@ -110,8 +123,8 @@ $(document).ready(function () {
                     .append("<br><input type='text' value='Preis' id='Itempreis'/>")
                     .append("<input type='button' value='erstellen' id='Itemerstellen'/>")
             
-                    .append("Delete Item: <br><input type='text' value='Name' id='Itemname2'/>")
-                    .append("<br><input type='button' value='löschen' id='Itemlöschen'/>")
+                    .append("<br>Delete Item: <br><input type='text' value='Name' id='Itemname2'/>")
+                    .append("<input type='button' value='löschen' id='Itemlöschen'/>")
                     .append("<br>OUTPUT:")
        });
        $(document).on("click","#Itemlöschen",function(){
@@ -170,6 +183,7 @@ $(document).ready(function () {
                     if (data.CHANGEadresse == "erfolgreich") {
                                $("body").append("<br> Adresse wurde erfolgreich geändert!")
                     }
+                    else if (data.CHANGEadresse == "Adresse fehler")$("body").append("<br>Ups es ist ein Fehler entstanden")
                     else{
                         $("body").append("<br> Es ist ein Fehler aufgetreten. Versuchen Sie es nochmal!")
                     }
