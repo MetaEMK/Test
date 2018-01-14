@@ -28,7 +28,7 @@ public class DatenbankVerticle extends AbstractVerticle {
     private static final String SQL_ÜBERPRÜFE_ADRESSE =         "select adresse from user where name =?";
     private static final String SQL_ÜBERPRÜFE_ITEM =            "select name from item where name =?";
     private static final String SQL_DELETE =                    "drop table item";
-    private static final String SQL_ZEIGE_ITEMS =               "select name from item";
+    private static final String SQL_ZEIGE_ITEMS =               "select name,preis from item";
     private static final String SQL_ÜBERPRÜFE_PREIS     =       "select preis from item where name =?";
     private static final String USER_EXISTIERT = "USER_EXISITIERT";
     private static final String SQL_ÜBERPRÜFE_ITEMNAME = "select name from item where name =?";
@@ -182,18 +182,20 @@ public class DatenbankVerticle extends AbstractVerticle {
                          List<JsonArray> liste = abfrage.result().getResults();
                          
                          if (liste.isEmpty()) {
-                             LOGGER.info("ein solches Item existiert nicht");
-                             message.reply(new JsonObject().put("ItemPreis", "nonexistent"));
+                           
+                             message.reply(new JsonObject().put("ItemPreis", -1));
                          }
                      else{
-                         LOGGER.info("In der Datenbank sind Einträge");
+                        
                         
                  
                
-                connection.querySingleWithParams(SQL_ÜBERPRÜFE_PREIS, new JsonArray().add(itemname), ab ->{
+                connection.queryWithParams(SQL_ÜBERPRÜFE_PREIS, new JsonArray().add(itemname), ab ->{
+                     
                     if (ab.succeeded()) {
-                        String zeilen = ab.result().toString();
-                        LOGGER.info(zeilen);
+                        List<JsonArray> liste2 = ab.result().getResults();
+                         
+                        int zeilen = liste2.get(0).getInteger(0);
                        
                             message.reply(new JsonObject().put("ItemPreis", zeilen));
                     }
@@ -320,18 +322,20 @@ public class DatenbankVerticle extends AbstractVerticle {
                 con.query(SQL_ZEIGE_ITEMS, baum -> {
                     LOGGER.info("tut");
                     if (baum.succeeded()) {
+                        JsonObject adf = new JsonObject();
                         LOGGER.info("tut2");
                         List<JsonArray> liste = baum.result().getResults();
-                        for (int i = 0; i < liste.size(); i++) {
-                            
-                            
-                        
+                        for (int i = 0; i < liste.size(); i++) {   
                         JsonArray test = liste.get(i);
-                        JsonObject adf = new JsonObject().put("test", test.getString(0));
-                        LOGGER.info(adf.getString("test"));
+                        adf.put("test " + i,test.getString(0));
+                        adf.put("preis2" + i, test.getInteger(1));
+                        } 
+                        int ads = liste.size();
+                     
+                        adf.put("size", ads);
+                        message.reply(adf);
                         
-                       
-                    } LOGGER.info("" + liste.size());}
+                    }
                     else{
                         LOGGER.error("Fehler" + baum.cause());
                     }
@@ -391,11 +395,13 @@ public class DatenbankVerticle extends AbstractVerticle {
         dbClient.getConnection(res -> {
             if (res.succeeded()) {
                 SQLConnection connection = res.result();
-                connection.querySingleWithParams(SQL_ÜBERPRÜFE_KONTO, new JsonArray().add(name), abfrage -> {
+                connection.queryWithParams(SQL_ÜBERPRÜFE_KONTO, new JsonArray().add(name), abfrage -> {
                     if (abfrage.succeeded()) {
-                        String zeilen = abfrage.result().toString();
+                        List<JsonArray> liste = abfrage.result().getResults();
+                        int zeilen = liste.get(0).getInteger(0);
                        
                             message.reply(new JsonObject().put("konto", zeilen));
+                             LOGGER.info("BAUm");
                             LOGGER.info("KONTO: Der Kontostand von " + name + " beträgt " + zeilen);
                             
                         
@@ -413,9 +419,10 @@ public class DatenbankVerticle extends AbstractVerticle {
         dbClient.getConnection(res -> {
             if (res.succeeded()) {
                 SQLConnection connection = res.result();
-                connection.querySingleWithParams(SQL_ÜBERPRÜFE_ADRESSE, new JsonArray().add(name), abfrage -> {
+                connection.queryWithParams(SQL_ÜBERPRÜFE_ADRESSE, new JsonArray().add(name), abfrage -> {
                     if (abfrage.succeeded()) {
-                        String zeilen = abfrage.result().toString();
+                        List<JsonArray> liste = abfrage.result().getResults();
+                        String zeilen = liste.get(0).toString();
 
                             message.reply(new JsonObject().put("adresse", zeilen));
                             LOGGER.info("ADRESSE: Die Adresse von " + name + " ist " + zeilen);
@@ -536,11 +543,11 @@ private void uptAdresse(Message<JsonObject> message){
                 SQLConnection connection = res.result();
                 connection.execute("update user set adresse = " + "'" + adresse + "'" +  " where name = "+ "'" + name + "'" + "", change -> {
                     if (change.succeeded()) {
-                        message.reply(new JsonObject().put("changeAdresseControl", "es tut"));
+                        message.reply(new JsonObject().put("ÄnderrungAdresse", "es tut"));
                         LOGGER.info("ADRESSE: erfolgreich");
                     }
                     else{
-                         message.reply(new JsonObject().put("changeAdresseControl", Boolean.FALSE));
+                         message.reply(new JsonObject().put("ÄnderrungAdresse", "tut nicht"));
                          LOGGER.error("" + change.cause());
                     }
                 });

@@ -207,7 +207,7 @@ public class HttpVerticle extends AbstractVerticle {
             vertx.eventBus().send(EB_ADRESSE, request2,konto2, reply ->{
                 if (reply.succeeded()) {
                     JsonObject dbkonto = (JsonObject) reply.result().body();
-                    String knt = dbkonto.getString("konto");
+                    int knt = dbkonto.getInteger("konto");
                     jo.put("konto", knt);
                        
                     
@@ -252,13 +252,13 @@ public class HttpVerticle extends AbstractVerticle {
             vertx.eventBus().send(EB_ADRESSE, request, options, reply -> {
                 if (reply.succeeded()) {
                     JsonObject control = (JsonObject) reply.result().body();
-                    if (control.getBoolean("changeAdresseControl").equals("es tut")) {
-                        jo.put("text", "richtig").put("CHANGEadresse","erfolgreich");
+                    if (control.getString("ÄnderrungAdresse").equals("es tut")) {
+                        jo.put("CHANGEadresse","erfolgreich");
                         LOGGER.info("Adresse erfolgreich geändert");
                         response.end(Json.encodePrettily(jo));
                     }
                     else{
-                        jo.put("CHANGEadresse", Boolean.FALSE);
+                        jo.put("CHANGEadresse", "Adresse fehler");
                         response.end(Json.encodePrettily(jo));
                     }
                     
@@ -273,7 +273,7 @@ public class HttpVerticle extends AbstractVerticle {
             vertx.eventBus().send(EB_ADRESSE, request, options, reply -> {
                 if (reply.succeeded()) {
                     JsonObject dbkonto = (JsonObject) reply.result().body();
-                    String konto = dbkonto.getString("konto");
+                    int konto = dbkonto.getInteger("konto");
                     jo.put("konto", konto);
                      response.end(Json.encodePrettily(jo));
                 }
@@ -289,6 +289,9 @@ public class HttpVerticle extends AbstractVerticle {
             String name=routingContext.request().getParam("regname");
             String passwort=routingContext.request().getParam("passwort");
             String adresse = routingContext.request().getParam("regadresse");
+            if (!name.isEmpty() && !passwort.isEmpty() && !adresse.isEmpty()) {
+                
+           
             JsonObject request = new JsonObject().put("name", name).put("passwort", passwort).put("adresse", adresse);
             DeliveryOptions options = new DeliveryOptions().addHeader("action", "erstelleUser");
             vertx.eventBus().send(EB_ADRESSE, request, options, reply -> {
@@ -312,14 +315,35 @@ public class HttpVerticle extends AbstractVerticle {
                 }
             });
         }
+            else{
+                jo.put("typ", "bestätigung").put("text", "leer");
+            }}
         else if (typ.equals("zeigeItem")){
             JsonObject request = new JsonObject();
              DeliveryOptions options = new DeliveryOptions().addHeader("action", "zeigeItems");
+             DeliveryOptions opt = new DeliveryOptions().addHeader("action", "getPreis");
              vertx.eventBus().send(EB_ADRESSE, request,options,  reply -> {
                 if( reply.succeeded()){
-                 LOGGER.info("es tut");
-             }
-             });
+                    JsonObject ant = (JsonObject) reply.result().body();
+                    jo.put("size", (ant.size()-1)/2);
+                    LOGGER.info("" + jo.getInteger("size"));
+                    for (int i = 0; i < ant.getInteger("size"); i++) {
+                      
+                        String a = ant.getString("test " + i);
+                        int preis = ant.getInteger("preis2" + i);
+                        jo.put("text", "Itemnamen").put("items"+i, a).put("preis" + i, preis);
+                        
+                        }
+                    response.end(Json.encodePrettily(jo));
+                        
+                    }
+                });
+             
+                    
+                    
+                    
+             
+             
         }
         else if (typ.equals("Shopoffnen")){
             LOGGER.info("shop wird aufgerufen");
@@ -334,7 +358,8 @@ public class HttpVerticle extends AbstractVerticle {
             vertx.eventBus().send(EB_ADRESSE, request ,options,  reply -> {
                 if (reply.succeeded()) {
                     JsonObject dbkonto = (JsonObject) reply.result().body();
-                    String konto = dbkonto.getString("konto");
+                    int konto = dbkonto.getInteger("konto");
+                    LOGGER.info("tut");
                     jo.put("Kontostand", konto);
                     
                     
@@ -345,13 +370,19 @@ public class HttpVerticle extends AbstractVerticle {
             DeliveryOptions opt = new DeliveryOptions().addHeader("action", "getPreis");
             vertx.eventBus().send(EB_ADRESSE, Gegenstand, opt, abfrage -> {
                 if (abfrage.succeeded()) {
+                
                   JsonObject pr  =  (JsonObject) abfrage.result().body();
-                    if (pr.getString("ItemPreis").equals("nonexistent")) {
+                
+                    if (pr.getInteger("ItemPreis")== -1) {
+                        LOGGER.info("ad");
                         jo.put("ItemPreis", "nonexistent");
                         response.end(Json.encodePrettily(jo));
+                       
                     }
                     else{
-                        String a = pr.getString("ItemPreis");
+                        LOGGER.info("adsfkj");
+                        
+                        int a = pr.getInteger("ItemPreis");
                         jo.put("ItemPreis123", a);
                         
                         response.end(Json.encodePrettily(jo));

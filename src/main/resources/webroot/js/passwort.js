@@ -17,11 +17,11 @@ $(document).ready(function () {
         },
         
         function(data){
-     
-                if (data.function == '["user"]') {
-                    var konto = data.konto;
+      var konto = data.konto;
                     var name = data.name;
                     var adresse = data.adresse;
+                if (data.function == '["user"]') {
+                   
                             $("body").html("Einstellungen:<br>")
                                     .append("<br> Name: " + name)
                                     .append("<br> Adresse: " + adresse)
@@ -30,7 +30,21 @@ $(document).ready(function () {
                                     .append("<br> Kontostand: " + konto +"€");
                 }
                 if (data.function == '["admin"]') {
-                    $("body").html("Herzlich Willkommen auf der Admin Seite<br>")
+                         $("body").html("Einstellungen:<br>")
+                         .append("<br> Admineinstellungen: <input type='button' value='Adminbereich' id='admineinstellungen'/>")
+                                    .append("<br> Name: " + name)
+                                    .append("<br> Adresse: " + adresse)
+                                    .append("<input type='text' value='' id='AEadr'/>")
+                                    .append("  <input type='button' value='ändern' id='AEgo'/>")
+                                    .append("<br> Kontostand: " + konto +"€");
+                                    
+                }
+       
+        }
+    );
+    });
+    $(document).on("click","#admineinstellungen",function() {
+                            $("body").html("Herzlich Willkommen auf der Admin Seite<br>")
                             .append("Zu den Itemshopeinstellungen<br>")
                             .append("<input type='button' value='GO' id='Adminshop'/>")
                             .append("<br>Kontostände: <br> Überprüfe Kontostand von: <input type='text' value='name' id='Adminname'/>").append("<input type='button' value='OK' id='geld'/>")
@@ -38,10 +52,6 @@ $(document).ready(function () {
                             
                             
                             .append("<br><br> OUTPUT:");
-                }
-       
-        }
-    );
     });
            $(document).on("click","#zeigeUser",function(){
            $.post("../anfrage", {
@@ -124,14 +134,14 @@ $(document).ready(function () {
              function(data){
                 
                   $("body").append("<br> OUTPUT: ")
-                  if(data.text == "richtig"){
+                  
                     if (data.CHANGEadresse == "erfolgreich") {
                                $("body").append("<br> Adresse wurde erfolgreich geändert!")
                     }
                     else{
                         $("body").append("<br> Es ist ein Fehler aufgetreten. Versuchen Sie es nochmal!")
                     }
-                }
+                
            
             });
        });
@@ -155,6 +165,7 @@ $(document).ready(function () {
                 if (data.text == "ok") {
                     $("body").html("Gratulation, du bist angemeldet!")
                             .append("<br><input type='button' value='Einstellungen' id='funct'/>")
+                            
                             .append("<br><input type='button' value='logout' id='logout'/>")
                             .append("<br><input type='button' value='shop' id='shop'/>")
                 }   else {
@@ -191,13 +202,33 @@ $(document).ready(function () {
         $("body").html("Willkommen im Shop <br>")
                 .append("Suchen: <input type='text' id='search'/><br>")
                 .append("<br><input type='button' value='Suchen' id='suche'/>")
-                .append("<br><input type='button' value='Suchen' id='test'/>");
+                .append("<br><input type='button' value='zeige alle Artikel' id='test'/>");
     });
      $(document).on("click", "#test", function(){
          $.post("../anfrage", {
                     typ: "zeigeItem",
                     
-                });
+                },
+                 function(data)   {
+                   var size = data.size;
+                    var test = "";
+                   
+                     
+                     for (var i = 0; i < size; i++) {
+                                test = data["items" + i];
+                            
+                              
+                               var preis = data["preis" + i];
+                               var a = (i+1);
+                             $("body").append("<br>Artikel " + a +": " + test+ " Preis: " + preis + "€");
+                     }
+                               
+                          
+                           
+                    });
+                    
+  
+                
      });
     $(document).on("click", "#suche", function(){
                 $.post("../anfrage", {
@@ -248,6 +279,10 @@ $(document).ready(function () {
                     else if (data.text=="falsch"){
                         $("body").append("Dieser Benutzer existiert schon")  
                     }
+                    else if (data.text =="leer"){
+                         $("body").append("Sie müssen alle Felder ausfüllen!") 
+                    }
+                    
                
             }
                 
