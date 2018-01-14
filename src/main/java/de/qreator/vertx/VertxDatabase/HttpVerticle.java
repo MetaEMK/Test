@@ -188,6 +188,95 @@ public class HttpVerticle extends AbstractVerticle {
             });
             
         }
+        else if (typ.equals("kaufeItem")){
+            JsonObject alles = new JsonObject();
+           
+            String name = session.get("name");
+            String item = routingContext.request().getParam("item");
+            alles.put("name", name);
+         
+            
+            
+              JsonObject requestPreis = new JsonObject().put("Gegenstand", item);
+            DeliveryOptions Preisopt = new DeliveryOptions().addHeader("action", "getPreis");
+             vertx.eventBus().send(EB_ADRESSE, requestPreis,Preisopt, reply ->{
+                 if (reply.succeeded()) {
+                     
+                     JsonObject dbpreis = (JsonObject) reply.result().body();
+                      int preis = dbpreis.getInteger("ItemPreis");
+                      if (preis != -1) {
+                         
+                     
+                      alles.put("Preis", preis);
+                      LOGGER.info(preis + "Preis");
+                      
+                      
+                      
+                      
+                      
+            JsonObject request = new JsonObject().put("name", name);
+            DeliveryOptions opt = new DeliveryOptions().addHeader("action", "getKonto");
+            vertx.eventBus().send(EB_ADRESSE, request,opt, replypreis ->{
+                if (replypreis.succeeded()) {
+                     JsonObject dbkonto = (JsonObject) replypreis.result().body();
+                      int konto = dbkonto.getInteger("konto");
+                      alles.put("konto", konto);
+                      LOGGER.info(konto + "Konto");
+             
+                
+          
+           
+             
+           DeliveryOptions Itemopt = new DeliveryOptions().addHeader("action", "buyItem"); 
+           LOGGER.info("Transaktion läuft");
+           vertx.eventBus().send(EB_ADRESSE,alles,Itemopt,replyitem ->{
+               
+               JsonObject Ikauf = (JsonObject) replyitem.result().body();
+               if (replyitem.succeeded()) {
+                   
+                   if (Ikauf.getString("Itemkauf").equals("erfolgreich")) {
+                        jo.put("ItemKauf", "success");
+                        response.end(Json.encodePrettily(jo));
+                   }
+                  
+               
+               else if (Ikauf.getString("Itemkauf").equals("Kontostand")){
+                   jo.put("ItemKauf", "Kontostand zu niedrig");
+                   response.end(Json.encodePrettily(jo));
+               }              
+               }
+               
+
+ 
+           });
+       }
+              
+            });
+                }else{
+                     jo.put("ItemKauf", "Item existiert nicht");
+                  response.end(Json.encodePrettily(jo));
+                 }
+                 }
+                 
+          
+             });    
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 }
+                 
         else if (typ.equals("function")){
             String name = session.get("name");
             jo.put("name", name);

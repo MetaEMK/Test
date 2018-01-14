@@ -27,6 +27,7 @@ public class DatenbankVerticle extends AbstractVerticle {
     private static final String SQL_ÜBERPRÜFE_KONTO =           "select money from user where name =?";
     private static final String SQL_ÜBERPRÜFE_ADRESSE =         "select adresse from user where name =?";
     private static final String SQL_ÜBERPRÜFE_ITEM =            "select name from item where name =?";
+
     private static final String SQL_DELETE =                    "drop table item";
     private static final String SQL_ZEIGE_ITEMS =               "select name,preis from item";
     private static final String SQL_ÜBERPRÜFE_PREIS     =       "select preis from item where name =?";
@@ -87,6 +88,9 @@ public class DatenbankVerticle extends AbstractVerticle {
         String action = message.headers().get("action");
 
         switch (action) {
+            case "buyItem":
+                buyItem(message);
+                break;
             case "getPreis":
                 getPreis(message);
                 break;
@@ -401,7 +405,7 @@ public class DatenbankVerticle extends AbstractVerticle {
                         int zeilen = liste.get(0).getInteger(0);
                        
                             message.reply(new JsonObject().put("konto", zeilen));
-                             LOGGER.info("BAUm");
+                             
                             LOGGER.info("KONTO: Der Kontostand von " + name + " beträgt " + zeilen);
                             
                         
@@ -433,6 +437,37 @@ public class DatenbankVerticle extends AbstractVerticle {
                 LOGGER.error("ADRESSE: Fehler bei der Verbindung mit der Datenbank: " + res.cause());
             }
         });
+    }
+    private void buyItem(Message <JsonObject> message){
+        LOGGER.info("Datenbank nimmt daten auf");
+        String name = message.body().getString("name");
+        int konto = message.body().getInteger("konto");
+        int preis = message.body().getInteger("Preis");
+        int Kontostand = konto - preis;
+        if (Kontostand >= 0) {
+            LOGGER.info("Kontostand: "+Kontostand);
+            
+        
+        dbClient.getConnection(res->{
+            if (res.succeeded()) {
+                SQLConnection connection = res.result();
+               connection.execute("update user set money = " + "'" + Kontostand + "'" +  " where name = "+ "'" + name + "'" + "", reply -> {
+                    if (reply.succeeded()) {
+                       message.reply(new JsonObject().put("Itemkauf", "erfolgreich"));
+                       LOGGER.info("Kauf erfolgreich");
+                   }
+                    else{
+                        message.reply(new JsonObject().put("Itemkauf", "Fehler"));
+                        LOGGER.info("Kauf nicht erfolgreich");
+                    }
+                });
+            }
+        });
+        }
+        else{
+            message.reply(new JsonObject().put("Itemkauf", "Kontostand"));
+            LOGGER.info("Kauf nicht erfolgreich Kontostand zu niedrig");
+        }
     }
     private void getFunction(Message<JsonObject> message) {
         String name = message.body().getString("name");

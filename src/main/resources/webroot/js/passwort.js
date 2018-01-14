@@ -202,9 +202,25 @@ $(document).ready(function () {
         $("body").html("Willkommen im Shop <br>")
                 .append("Suchen: <input type='text' id='search'/><br>")
                 .append("<br><input type='button' value='Suchen' id='suche'/>")
+                .append("<input type='button' value='kaufen' id='kaufen'/>")
                 .append("<br><input type='button' value='zeige alle Artikel' id='test'/>");
     });
-     $(document).on("click", "#test", function(){
+    $(document).on("click", "#kaufen", function(){
+         $.post("../anfrage", {
+                    typ: "kaufeItem",
+                    item: $("#search").val()
+                    
+                },
+                function(data){
+                    if (data.ItemKauf== "success") {
+                         $("body").append("<br>Sie haben den Gegenstand " +" erfolgreich erworben")
+                    }
+                    if(data.ItemKauf == "Item existiert nicht") $("body").append("<br>Diesen Gegenstand gibt es nicht.")
+                    if (data.ItemKauf== "Kontostand zu niedrig") $("body").append("<br>Ihr Kontostand ist leider zu niedrig")
+                }
+                );
+    } );
+    $(document).on("click", "#test", function(){
          $.post("../anfrage", {
                     typ: "zeigeItem",
                     
@@ -243,7 +259,8 @@ $(document).ready(function () {
                                 else{
                                     var preis = data.ItemPreis123
                                     var konto = data.Kontostand
-                                    $("body").append("<br>Der Artikel kostet: "+preis + "€" + " Ihr Kontostand beträgt: " + konto + "€");
+                                    $("body").append("<br>Der Artikel kostet: "+preis + "€" + " Ihr Kontostand beträgt: " + konto + "€    ")
+                                   
                                     
                                 }
                             }
