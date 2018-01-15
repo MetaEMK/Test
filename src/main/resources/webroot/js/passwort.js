@@ -24,11 +24,11 @@ $(document).ready(function () {
                    
                             $("body").html("Einstellungen:<br>")
                                     .append("<br> Name: " + name)
-                                    .append("<br> Passwort ändern: <input type='password' value='altes Passwort' id='PWändern1'/> <input type='password' value='neues Passwort' id='PWändern2'/> <input type='password' value='neues Passwort wiederholen' id='AEadr'/> <input type='button' value='Los' id='PWändernButton'/>")
+                                    .append("<br> Passwort ändern: <br> altes Passwort <input type='password' value='' id='PWändern1'/> neues Passwort <input type='password' value='' id='PWändern2'/> neues Passwort wiederholen <input type='password' value='' id='PWändern3'/> <input type='button' value='Los' id='PWändernButton'/>")
                                     .append("<br> Adresse: " + adresse)
-                                    .append("<input type='text' value='' id='AEadr'/>")
-                                    .append("  <input type='button' value='ändern' id='AEgo'/>")
+                                    .append("<input type='text' value='' id='AEadr'/>").append("  <input type='button' value='ändern' id='AEgo'/>")
                                     .append("<br> Kontostand: " + konto +"€");
+                            $("body").append("<br><br> OUTPUT: ")
                 }
                 if (data.function == '["admin"]') {
                          $("body").html("Einstellungen:<br>")
@@ -39,6 +39,7 @@ $(document).ready(function () {
                                     .append("<input type='text' value='' id='AEadr'/>")
                                     .append("  <input type='button' value='ändern' id='AEgo'/>")
                                     .append("<br> Kontostand: " + konto +"€");
+                            $("body").append("<br><br> OUTPUT: ")
                                     
                 }
        
@@ -206,7 +207,7 @@ $(document).ready(function () {
             },
              function(data){
                 
-                  $("body").append("<br> OUTPUT: ")
+                  
                   
                     if (data.CHANGEadresse == "erfolgreich") {
                                $("body").append("<br> Adresse wurde erfolgreich geändert!")
