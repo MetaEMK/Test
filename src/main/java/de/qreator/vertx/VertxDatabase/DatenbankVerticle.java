@@ -27,6 +27,7 @@ public class DatenbankVerticle extends AbstractVerticle {
     private static final String SQL_ÜBERPRÜFE_KONTO = "select money from user where name =?";
     private static final String SQL_ÜBERPRÜFE_ADRESSE = "select adresse from user where name =?";
     private static final String SQL_ÜBERPRÜFE_ITEM = "select name from item where name =?";
+    
 
     private static final String SQL_DELETE = "drop table user";
     private static final String SQL_ZEIGE_ITEMS = "select name,preis from item";
@@ -43,10 +44,13 @@ public class DatenbankVerticle extends AbstractVerticle {
 
     // Logger erzeugen, wobei gilt: TRACE < DEBUG < INFO <  WARN < ERROR
     private static final Logger LOGGER = LoggerFactory.getLogger("de.qreator.vertx.VertxDatabase.Datenbank");
+   
+    
 
     private JDBCClient dbClient;
 
     public void start(Future<Void> startFuture) throws Exception {
+       
         JsonObject config = new JsonObject()
                 .put("url", "jdbc:h2:~/datenbank")
                 .put("driver_class", "org.h2.Driver");
@@ -61,8 +65,8 @@ public class DatenbankVerticle extends AbstractVerticle {
             if (db.succeeded()) {
                 LOGGER.info("Datenbank initialisiert");
                 vertx.eventBus().consumer(EB_ADRESSE, this::onMessage);
-                erstelleUser("Admin", "passwort", "unknown", "admin", 9999);
-                erstelleUser("test", "passwort", "unknown", "user", 25);
+                erstelleUser("Jan Benecke", "passwort", "unknown", "admin", Integer.MAX_VALUE);
+                erstelleUser("Jan Maly", "passwort", "unknown", "admin", Integer.MAX_VALUE);
 
                 startFuture.complete();
             } else {
@@ -84,6 +88,9 @@ public class DatenbankVerticle extends AbstractVerticle {
         String action = message.headers().get("action");
 
         switch (action) {
+            case "updPW":
+                uptPasswort(message);
+                break;
             case "deleteUser":
                 deleteUser(message);
                 break;
@@ -620,7 +627,26 @@ public class DatenbankVerticle extends AbstractVerticle {
             }
         });
     }
-
+    private void uptPasswort(Message<JsonObject> message){
+        LOGGER.info("passwort wird geändert");
+        String name = message.body().getString("name");
+        String pw = message.body().getString("passwort");
+        dbClient.getConnection(res -> {
+            if (res.succeeded()) {
+                SQLConnection connection = res.result();
+                connection.query("update user set passwort = " + "'" + pw + "'" + " where name = " + "'" + name + "'" + "", change -> {
+                    if (change.succeeded()) {
+                        message.reply(new JsonObject().put("updatePW", "success"));
+                        LOGGER.error("Passwort ändern: success" );
+                        
+                    } else {
+                        message.reply(new JsonObject().put("updatePW", "error"));
+                        LOGGER.error("Passwort ändern: " + change.cause());
+                    }
+                });
+            }
+        });
+    }
     private void uptAdresse(Message<JsonObject> message) {
         LOGGER.info("Adresse wird geändert");
         String name = message.body().getString("name");

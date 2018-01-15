@@ -24,6 +24,7 @@ $(document).ready(function () {
                    
                             $("body").html("Einstellungen:<br>")
                                     .append("<br> Name: " + name)
+                                    .append("<br> Passwort ändern: <input type='password' value='altes Passwort' id='PWändern1'/> <input type='password' value='neues Passwort' id='PWändern2'/> <input type='password' value='neues Passwort wiederholen' id='AEadr'/> <input type='button' value='Los' id='PWändernButton'/>")
                                     .append("<br> Adresse: " + adresse)
                                     .append("<input type='text' value='' id='AEadr'/>")
                                     .append("  <input type='button' value='ändern' id='AEgo'/>")
@@ -33,6 +34,7 @@ $(document).ready(function () {
                          $("body").html("Einstellungen:<br>")
                          .append("<br> Admineinstellungen: <input type='button' value='Adminbereich' id='admineinstellungen'/>")
                                     .append("<br> Name: " + name)
+                                    .append("<br> Passwort ändern: <br> altes Passwort <input type='password' value='' id='PWändern1'/> neues Passwort <input type='password' value='' id='PWändern2'/> neues Passwort wiederholen <input type='password' value='' id='PWändern3'/> <input type='button' value='Los' id='PWändernButton'/>")
                                     .append("<br> Adresse: " + adresse)
                                     .append("<input type='text' value='' id='AEadr'/>")
                                     .append("  <input type='button' value='ändern' id='AEgo'/>")
@@ -43,6 +45,31 @@ $(document).ready(function () {
         }
     );
     });
+        $(document).on("click","#PWändernButton",function() {
+            if($("#PWändern3").val() == $("#PWändern2").val()){
+          
+                    
+            $.post("../anfrage", {
+                typ: "wechslePW",
+                passwort: $("#PWändern2").val(),
+                pw: $("#PWändern1").val()
+               
+            }, function(data){
+                    if (data.text =="UpdatePasswort"){
+                        if(data.PasswortUPT =="success")$("body").append("<br> Passwortänderrung erfolgreich")
+                        else if (data.PasswortUPT =="passwort")$("body").append("<br> das alte Passwort stimmt nicht")
+                        else if (data.PasswortUPT =="leer")$("body").append("<br> Sie haben nicht alle Felder ausgefüllt")
+                      
+                            else{
+                                $("body").append("<br> es ist ein Fehler aufgetreten!")
+                            }
+                    }
+            });
+        }else{
+            $("body").append("<br> Die Passwörter stimmen nicht überein")
+        }
+        
+        });
     $(document).on("click","#admineinstellungen",function() {
                             $("body").html("Herzlich Willkommen auf der Admin Seite<br>")
                             .append("Zu den Itemshopeinstellungen<br>")
@@ -122,6 +149,7 @@ $(document).ready(function () {
                     .append("<br><input type='text' value='Name' id='Itemname'/>")
                     .append("<br><input type='text' value='Preis' id='Itempreis'/>")
                     .append("<input type='button' value='erstellen' id='Itemerstellen'/>")
+                    .append("<br> Zeige alle Shopartikel an: <input type='button' value='los' id='test'/>")
             
                     .append("<br>Delete Item: <br><input type='text' value='Name' id='Itemname2'/>")
                     .append("<input type='button' value='löschen' id='Itemlöschen'/>")

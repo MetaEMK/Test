@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
  */
 public class HttpVerticle extends AbstractVerticle {
 
-    private int port = 8080;
+    private final int port = 8080;
     private static final Logger LOGGER = LoggerFactory.getLogger("de.qreator.vertx.VertxDatabase.HttpServer");
     private static final String EB_ADRESSE = "vertxdatabase.eventbus";
 
@@ -77,7 +77,7 @@ public class HttpVerticle extends AbstractVerticle {
 
     private void anfragenHandler(RoutingContext routingContext) {
         
-        LOGGER.info("Router für Anfragen");
+        LOGGER.info("Anfrage wird verarbeitet");
         String typ = routingContext.request().getParam("typ");
  
         HttpServerResponse response = routingContext.response();
@@ -105,8 +105,10 @@ public class HttpVerticle extends AbstractVerticle {
         }
         
         else if (typ.equals("erstelleItem")){
-            LOGGER.info("Erstelle ein Shopitem");
+            String user = session.get("name");
+            
             String name = routingContext.request().getParam("Itemname");
+            LOGGER.info(user + " erstellt das Shopitem: " + name);
             String preis = routingContext.request().getParam("Itempreis");
             JsonObject request = new JsonObject().put("name", name).put("preis", preis);
             DeliveryOptions opt = new DeliveryOptions().addHeader("action", "erstelleItem");
@@ -117,7 +119,7 @@ public class HttpVerticle extends AbstractVerticle {
                    String result = body.getString("ersItem");
                     if (result.equals("ja")) {
                         jo.put("text", "Itemerstellt").put("itemers", "ja");
-                        LOGGER.info("Shopitem erstellt");
+                        LOGGER.info("Shopitem: " + name +"  erstellt");
                     }
                     
                     else if (result.equals("existiert")){
@@ -126,7 +128,7 @@ public class HttpVerticle extends AbstractVerticle {
                     }
                     else {
                         jo.put("text", "Itemerstellt").put("itemers","fehler");
-                        LOGGER.error("Fehler beim Erstellen eines Shopitems");
+                        LOGGER.error("Fehler beim Erstellen eines Shopitems"+ reply.cause());
                         
                     }
                     response.end(Json.encodePrettily(jo));
@@ -138,10 +140,11 @@ public class HttpVerticle extends AbstractVerticle {
             
         }
                 else if (typ.equals("setzeKonto")){
-            LOGGER.info("Setze Kontostand");
+            String user = session.get("name");      
             String name = routingContext.request().getParam("Name");
             String Betrag = routingContext.request().getParam("Betrag");
             int konto = Integer.parseInt(Betrag);
+            LOGGER.info(user + " verändert den Kontostand von: " + name + " auf "+ konto + "€");
             DeliveryOptions opt = new DeliveryOptions().addHeader("action", "uptKonto");
             
             JsonObject request = new JsonObject().put("name", name).put("konto", konto);
@@ -173,15 +176,17 @@ public class HttpVerticle extends AbstractVerticle {
                     JsonObject body = (JsonObject) reply.result().body();
                     if (body.getBoolean("passwortStimmt") == true) {
                         session.put("angemeldet", "ja").put("name", name);
-                        
+                        LOGGER.info("der User " + name + " hat sich erfolgreich angemeldet");
                       
                         jo.put("typ", "überprüfung").put("text", "ok");
                         
                     } else {
+                        LOGGER.info("für den Account: " + name + "wurde das falsche Passwort eingegeben");
                         jo.put("typ", "überprüfung").put("text", "nein");
                     }
                     response.end(Json.encodePrettily(jo));
                 } else {
+                    LOGGER.error("Bei der Anmeldung von: " + name + " ist ein Fehler aufgetreten:" + reply.cause());
                     jo.put("typ", "überprüfung").put("text", "nein");
                     response.end(Json.encodePrettily(jo));
                 }
@@ -194,6 +199,7 @@ public class HttpVerticle extends AbstractVerticle {
             String name = session.get("name");
             String item = routingContext.request().getParam("item");
             alles.put("name", name);
+            LOGGER.info("Der User: " + name + " versucht das Item: " + item + " zu erwerben.");
          
             
             
@@ -208,7 +214,7 @@ public class HttpVerticle extends AbstractVerticle {
                          
                      
                       alles.put("Preis", preis);
-                      LOGGER.info(preis + "Preis");
+                      LOGGER.info("das Item kostet: " + preis + "€");
                       
                       
                       
@@ -221,7 +227,7 @@ public class HttpVerticle extends AbstractVerticle {
                      JsonObject dbkonto = (JsonObject) replypreis.result().body();
                       int konto = dbkonto.getInteger("konto");
                       alles.put("konto", konto);
-                      LOGGER.info(konto + "Konto");
+                      LOGGER.info("Der user hat einen Kontostand von: " + konto + "€");
              
                 
           
@@ -237,11 +243,14 @@ public class HttpVerticle extends AbstractVerticle {
                    if (Ikauf.getString("Itemkauf").equals("erfolgreich")) {
                         jo.put("ItemKauf", "success");
                         response.end(Json.encodePrettily(jo));
+                        LOGGER.info("Kauf erfolgreich");
+                                
                    }
                   
                
                else if (Ikauf.getString("Itemkauf").equals("Kontostand")){
                    jo.put("ItemKauf", "Kontostand zu niedrig");
+                   LOGGER.info("Der Kontostand von: "+ name + "ist zu niedrig");
                    response.end(Json.encodePrettily(jo));
                }              
                }
@@ -254,6 +263,7 @@ public class HttpVerticle extends AbstractVerticle {
             });
                 }else{
                      jo.put("ItemKauf", "Item existiert nicht");
+                     LOGGER.info("das Item existiert nicht!");
                   response.end(Json.encodePrettily(jo));
                  }
                  }
@@ -280,6 +290,7 @@ public class HttpVerticle extends AbstractVerticle {
         else if (typ.equals("function")){
             String name = session.get("name");
             jo.put("name", name);
+            LOGGER.info("Die Funktion von: " + name  + " wird überprüft");
             JsonObject request = new JsonObject().put("name", name);
             DeliveryOptions function2 = new DeliveryOptions().addHeader("action", "getFunction");
             vertx.eventBus().send(EB_ADRESSE, request,function2, reply ->{
@@ -287,6 +298,7 @@ public class HttpVerticle extends AbstractVerticle {
                     JsonObject dbfunction = (JsonObject) reply.result().body();
                     String func = dbfunction.getString("function");
                     jo.put("function", func);
+                    LOGGER.info("Der User hat die Funktion: " + func);
                        
                     
                 }
@@ -298,6 +310,7 @@ public class HttpVerticle extends AbstractVerticle {
                     JsonObject dbkonto = (JsonObject) reply.result().body();
                     int knt = dbkonto.getInteger("konto");
                     jo.put("konto", knt);
+                     LOGGER.info("Der User hat einen Kontostand von: " + knt + "€");
                        
                     
                 }
@@ -310,13 +323,15 @@ public class HttpVerticle extends AbstractVerticle {
                     String adre = dbkonto.getString("adresse");
                     jo.put("adresse", adre);
                        response.end(Json.encodePrettily(jo));
+                        LOGGER.info("Der User hat die Adresse: " + adre);
                     
                 }
             });
         }
         else if (typ.equals("löscheItem")){
-            LOGGER.info("lösche Item");
+           String user = session.get("name");
             String name = routingContext.request().getParam("Itemname");
+             LOGGER.info(user+" löscht Item " + name);
             JsonObject request = new JsonObject().put("name", name);
             DeliveryOptions opt = new DeliveryOptions().addHeader("action", "löscheItem");
             vertx.eventBus().send(EB_ADRESSE, request, opt, reply ->{
@@ -328,13 +343,15 @@ public class HttpVerticle extends AbstractVerticle {
                 else{
                     jo.put("text", "ItemGelöscht").put("itemdelete", "fehler");
                     response.end(Json.encodePrettily(jo));
+                    LOGGER.error("Beim Itemlöschen ist der Fehler: " + reply.cause() +" aufgetreten");
                 }
  
             });
         }
         else if (typ.equals("AEadresse")){
-            LOGGER.info("Adresse wird geändert");
+          
             String name = session.get("name");
+              LOGGER.info("Adresse von: "+ name +" wird geändert");
             String adresse = routingContext.request().getParam("Adresse");
             JsonObject request  = new JsonObject().put("name", name).put("adresse", adresse);
             DeliveryOptions options = new DeliveryOptions().addHeader("action", "changeAdresse");
@@ -357,9 +374,10 @@ public class HttpVerticle extends AbstractVerticle {
             });
         }
         else if(typ.equals("Geld")){
-            LOGGER.info("Kontostand wird überprüft");
+           String user = session.get("name");
             String name = routingContext.request().getParam("Kontoname");
             JsonObject request = new JsonObject().put("name", name);
+             LOGGER.info("Kontostand von " + name + " wird von " + user +" überprüft");
             DeliveryOptions options = new DeliveryOptions().addHeader("action", "getKonto");
             vertx.eventBus().send(EB_ADRESSE, request, options, reply -> {
                 if (reply.succeeded()) {
@@ -375,6 +393,58 @@ public class HttpVerticle extends AbstractVerticle {
                 }
             });
                 }
+        else if(typ.equals("wechslePW")){
+            String name=session.get("name");
+            String pw = routingContext.request().getParam("pw");
+            String passwort=routingContext.request().getParam("passwort");
+            if (pw.isEmpty()||passwort.isEmpty()) {
+              
+                jo.put("text", "UpdatePasswort").put("PasswortUPT", "leer");
+                response.end(Json.encodePrettily(jo));
+            }
+            else{
+                
+            JsonObject request2 = new JsonObject().put("name", name).put("passwort", pw);
+            DeliveryOptions options2 = new DeliveryOptions().addHeader("action", "ueberpruefe-passwort");
+            vertx.eventBus().send(EB_ADRESSE, request2, options2, reply2 -> {
+                if(reply2.succeeded()){
+                     JsonObject result = (JsonObject) reply2.result().body();
+                     if (result.getBoolean("passwortStimmt") == true) {
+                  
+                    
+    
+            JsonObject request = new JsonObject().put("name", name).put("passwort", passwort);
+            DeliveryOptions options = new DeliveryOptions().addHeader("action", "updPW");
+             vertx.eventBus().send(EB_ADRESSE, request, options, reply -> {
+              
+                 if (reply.succeeded()) {
+                     JsonObject res = (JsonObject) reply.result().body();
+                     if (res.getString("updatePW").equals("success")) {
+                         LOGGER.info("success");
+                         jo.put("text", "UpdatePasswort").put("PasswortUPT", "success");
+                         response.end(Json.encodePrettily(jo));
+                     }
+                     else {
+                         LOGGER.error("Passwortänderrung fehlgeschlagen");
+                         jo.put("text", "UpdatePasswort").put("PasswortUPT", "error");
+                         response.end(Json.encodePrettily(jo));
+                     }
+                 }
+                 else{
+                     LOGGER.error("" + reply.cause());
+                 }
+             });
+              }
+                     else{
+                         jo.put("text", "UpdatePasswort").put("PasswortUPT", "passwort");
+                           response.end(Json.encodePrettily(jo));
+                                 
+                     }
+                }
+                
+            });
+        
+            }}
         else if (typ.equals("registrierung")) {
             LOGGER.info("daten erhalten");
             String name=routingContext.request().getParam("regname");
