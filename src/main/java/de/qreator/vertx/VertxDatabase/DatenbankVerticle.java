@@ -10,6 +10,9 @@ import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.ResultSet;
 import io.vertx.ext.sql.SQLConnection;
 import io.vertx.ext.sql.SQLRowStream;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import javafx.scene.chart.XYChart.Series;
 import org.slf4j.Logger;
@@ -18,7 +21,7 @@ import org.slf4j.LoggerFactory;
 public class DatenbankVerticle extends AbstractVerticle {
 
     private static final String SQL_NEUE_TABELLE_SHOP = "create table if not exists item(id int auto_increment, name varchar(20) not null, preis int not null,primary key(name))";
-    private static final String SQL_NEUE_TABELLE = "create table if not exists user(id int auto_increment,name varchar(20) not null, passwort varchar(20) not null,adresse varchar(20) not null,money int not null,function varchar(20) not null,primary key(name))";
+    private static final String SQL_NEUE_TABELLE = "create table if not exists user(id int auto_increment,name varchar(20) not null, passwort varchar(9999) not null,adresse varchar(20) not null,money int not null,function varchar(20) not null,primary key(name))";
     private static final String SQL_ÜBERPRÜFE_PASSWORT = "select passwort from user where name=?";
     private static final String SQL_ÜBERPRÜFE_EXISTENZ_USER = "select name from user where name=?";
     private static final String SQL_ÜBERPRÜFE_FUNCTION = "select function from user where name =?";
@@ -47,9 +50,9 @@ public class DatenbankVerticle extends AbstractVerticle {
     private JDBCClient dbClient;
 
     public void start(Future<Void> startFuture) throws Exception {
-
+        
         JsonObject config = new JsonObject()
-                .put("url", "jdbc:h2:~/datenbank")
+                .put("url", "jdbc:h2:~/datenbank3")
                 .put("driver_class", "org.h2.Driver");
 
         dbClient = JDBCClient.createShared(vertx, config);
@@ -60,10 +63,12 @@ public class DatenbankVerticle extends AbstractVerticle {
 
         datenbankFuture.setHandler(db -> {
             if (db.succeeded()) {
+                String pw32 = "passwort";
+                pw32 = hashcode(pw32);
                 LOGGER.info("Datenbank initialisiert");
                 vertx.eventBus().consumer(EB_ADRESSE, this::onMessage);
-                erstelleUser("Jan Benecke", "passwort", "unknown", "admin", Integer.MAX_VALUE);
-                erstelleUser("Jan Maly", "passwort", "unknown", "admin", Integer.MAX_VALUE);
+                erstelleUser("Jan Benecke", pw32, "unknown", "admin", Integer.MAX_VALUE);
+                erstelleUser("Jan Maly", pw32, "unknown", "admin", Integer.MAX_VALUE);
 
                 startFuture.complete();
             } else {
@@ -137,7 +142,21 @@ public class DatenbankVerticle extends AbstractVerticle {
                 message.fail(ErrorCodes.SCHLECHTE_AKTION.ordinal(), "Schlechte Aktion: " + action);
         }
     }
-
+private String hashcode(String res){
+LOGGER.info(res + " das ist ein Klartext");
+    InputStream stream = new ByteArrayInputStream(res
+        .getBytes(StandardCharsets.UTF_8));
+// oder, um einen Hash für eine Datei zu bestimmen:
+// InputStream stream = new FileInputStream("D:\\test.png");
+try {
+    // SHA-1, MD5 oder SHA-256
+    //System.out.println(Hash.checksum(stream, "SHA-256"));
+    res = Hash.checksum(stream, "SHA-256");
+} catch (Exception e) {
+    e.printStackTrace();
+}
+   return res; 
+}
     private void löscheDatenbank() {
 
         dbClient.getConnection(res -> {
@@ -160,11 +179,16 @@ public class DatenbankVerticle extends AbstractVerticle {
     private void uptKonto(Message<JsonObject> message) {
         String name = message.body().getString("name");
         int konto = message.body().getInteger("konto");
-        String konto2 = "" + konto;
+     
         LOGGER.info(name + "");
         dbClient.getConnection(res -> {
             if (res.succeeded()) {
                 SQLConnection connection = res.result();
+                connection.queryWithParams(SQL_ÜBERPRÜFE_EXISTENZ_USER, new JsonArray().add(name), result->{
+                    if (result.succeeded()) {
+                        List<JsonArray> liste = result.result().getResults();
+                        if (!liste.isEmpty()) {
+                    
                 connection.execute("update user set money = " + konto + " where name = " + "'" + name + "'" + "", abfrage -> {
                     if (abfrage.succeeded()) {
                         message.reply(new JsonObject().put("uptKonto", "success"));
@@ -175,10 +199,15 @@ public class DatenbankVerticle extends AbstractVerticle {
                     }
 
                 });
-            }
-
-        });
-    }
+            
+ 
+        }
+                   
+                };
+                        });
+            };
+    });
+                }
 
     private void getPreis(Message<JsonObject> message) {
         String itemname = message.body().getString("Gegenstand");
@@ -301,14 +330,17 @@ public class DatenbankVerticle extends AbstractVerticle {
 
     private void erstelleNeuenUser(Message<JsonObject> message) {
         String name = message.body().getString("name");
-        String passwort = message.body().getString("passwort");
+    
+        String passwort2 = message.body().getString("passwort");
+        passwort2 = hashcode(passwort2);
+       
         String adresse = message.body().getString("adresse");
         String function = message.body().getString("function");
         if (function == null) {
             function = "user";
         }
         int money = 0;
-        Future<Void> userErstelltFuture = erstelleUser(name, passwort, adresse, function, money);
+        Future<Void> userErstelltFuture = erstelleUser(name, passwort2, adresse, function, money);
         userErstelltFuture.setHandler(reply -> {
             if (reply.succeeded()) {
                 LOGGER.info("REG: reply (positive) sent");
@@ -461,12 +493,15 @@ public class DatenbankVerticle extends AbstractVerticle {
                 connection.queryWithParams(SQL_ÜBERPRÜFE_KONTO, new JsonArray().add(name), abfrage -> {
                     if (abfrage.succeeded()) {
                         List<JsonArray> liste = abfrage.result().getResults();
+                        if (liste.isEmpty()) {
+                            message.reply(new JsonObject().put("konto", "leer"));
+                        }else{
                         int zeilen = liste.get(0).getInteger(0);
 
                         message.reply(new JsonObject().put("konto", zeilen));
 
                         LOGGER.info("KONTO: Der Kontostand von " + name + " beträgt " + zeilen);
-
+                        }
                     }
 
                 });
@@ -599,17 +634,24 @@ public class DatenbankVerticle extends AbstractVerticle {
     private void überprüfeUser(Message<JsonObject> message) {
 
         String name = message.body().getString("name");
-        String passwort = message.body().getString("passwort");
+        String passwort2 = message.body().getString("passwort");
+        LOGGER.info("Überprüfe, ob der Nutzer " + name + " mit dem Passwort " + passwort2 + " sich anmelden kann."); 
+        String pw = null;
+        pw = hashcode(passwort2);
+        final String passwort = pw;
+        pw= null;
+        LOGGER.info("Überprüfe, ob der Nutzer " + name + " mit dem Passwort " + passwort + " sich anmelden kann."); 
 
-        LOGGER.info("Überprüfe, ob der Nutzer " + name + " mit dem Passwort " + passwort + " sich anmelden kann.");
+        
 
         dbClient.queryWithParams(SQL_ÜBERPRÜFE_PASSWORT, new JsonArray().add(name), abfrage -> {
             if (abfrage.succeeded()) {
                 List<JsonArray> zeilen = abfrage.result().getResults();
                 if (zeilen.size() == 1) {
                     String passwortDB = zeilen.get(0).getString(0);
-
+LOGGER.info("Hash: " + passwort + "DB: " + passwortDB);
                     if (passwortDB.equals(passwort)) {
+                        
                         message.reply(new JsonObject().put("passwortStimmt", Boolean.TRUE));
                         LOGGER.info("Anmeldename und Passwort stimmen überein");
                     } else {
@@ -628,7 +670,9 @@ public class DatenbankVerticle extends AbstractVerticle {
     private void uptPasswort(Message<JsonObject> message) {
         LOGGER.info("passwort wird geändert");
         String name = message.body().getString("name");
-        String pw = message.body().getString("passwort");
+        String pw1 = message.body().getString("passwort");
+        final String pw = hashcode(pw1);
+        
         dbClient.getConnection(res -> {
             if (res.succeeded()) {
                 SQLConnection connection = res.result();

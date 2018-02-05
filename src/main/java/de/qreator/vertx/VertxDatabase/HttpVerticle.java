@@ -89,7 +89,7 @@ public class HttpVerticle extends AbstractVerticle {
             String angemeldet = session.get("angemeldet");
 
             jo.put("typ", "angemeldet");
-            String name = session.get("name");
+          
 
             if (angemeldet != null && angemeldet.equals("ja")) {
                 LOGGER.info("User ist angemeldet.");
@@ -135,16 +135,38 @@ public class HttpVerticle extends AbstractVerticle {
             String user = session.get("name");
             String name = routingContext.request().getParam("Name");
             String Betrag = routingContext.request().getParam("Betrag");
+            boolean t;
+            try {
+                t=true;
+                int bet = Integer.parseInt(Betrag);
+                
+            }
+            catch(NumberFormatException e){
+                jo.put("text", "updateKonto").put("setzeKonto", "fehler");
+                t=false;
+                response.end(Json.encodePrettily(jo));
+            }
+            if (t==true) {
+                
+            
             int konto = Integer.parseInt(Betrag);
             LOGGER.info(user + " verändert den Kontostand von: " + name + " auf " + konto + "€");
             DeliveryOptions opt = new DeliveryOptions().addHeader("action", "uptKonto");
 
             JsonObject request = new JsonObject().put("name", name).put("konto", konto);
             vertx.eventBus().send(EB_ADRESSE, request, opt, reply -> {
+                
                 if (reply.succeeded()) {
+                     JsonObject body = (JsonObject) reply.result().body();
+                   //  if (body.getInteger("uptkonto").equals("leer")) {
+                  //      jo.put("text", "updateKonto").put("setzeKonto", "leer");
+                  //       response.end(Json.encodePrettily(jo));
+                  //  }
+                     
                     jo.put("text", "updateKonto").put("setzeKonto", "success");
                     LOGGER.info("Kontostand update war erfolgreich");
                     response.end(Json.encodePrettily(jo));
+                     
                 } else {
                     JsonObject save = (JsonObject) reply.result().body();
                     String result = save.getString("uptKonto");
@@ -153,6 +175,7 @@ public class HttpVerticle extends AbstractVerticle {
                     response.end(Json.encodePrettily(jo));
                 }
             });
+            }
         } else if (typ.equals("anmeldedaten")) {
             String name = routingContext.request().getParam("anmeldename");
             String passwort = routingContext.request().getParam("passwort");
@@ -330,10 +353,16 @@ public class HttpVerticle extends AbstractVerticle {
             DeliveryOptions options = new DeliveryOptions().addHeader("action", "getKonto");
             vertx.eventBus().send(EB_ADRESSE, request, options, reply -> {
                 if (reply.succeeded()) {
+                    
                     JsonObject dbkonto = (JsonObject) reply.result().body();
+                    if (dbkonto.getString("konto").equals("leer")) {
+                        jo.put("konto", "leer");
+                    response.end(Json.encodePrettily(jo));
+                    }else{
                     int konto = dbkonto.getInteger("konto");
                     jo.put("konto", konto);
                     response.end(Json.encodePrettily(jo));
+                    }
                 } else {
                     jo.put("konto", "fehler");
                     LOGGER.error("" + reply.cause());

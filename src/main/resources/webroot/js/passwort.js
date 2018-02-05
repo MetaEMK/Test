@@ -139,6 +139,12 @@ $(document).ready(function () {
                     if (data.setzeKonto == "success"){
                         $("body").append("<br>Kontostand wurde erfolgreich übernommen")
                     }
+                    else if (data.setzeKonto =="fehler") {
+                        $("body").append("<br>Der Eintrag ist keine gültige Zahl")
+                    }
+                        else if (data.setzeKonto =="leer"){
+                           $("body").append("<br>Dieser User existiert nicht") 
+                        }
                     else{
                         $("body").append("<br>Fehler beim Übernehmen des Kontostandes: " + data.uptKonto)
                     }
@@ -225,8 +231,11 @@ $(document).ready(function () {
                 typ: "Geld",
                 Kontoname: $("#Adminname").val()
             }, function (data){
+                if (data.konto=="leer"){
+                    $("body").append("<br>Diesen User gibt es nicht");  
+                }else{
                var geld = data.konto
-                $("body").append("<br>Der Kontostand beträgt: " + geld);    
+                $("body").append("<br>Der Kontostand beträgt: " + geld);    }
             });
           
         });
